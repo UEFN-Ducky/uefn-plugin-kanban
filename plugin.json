@@ -1,0 +1,109 @@
+{
+  "id": "kanban",
+  "kind": "plugin",
+  "version": "1.0.0",
+  "label": "Kanban",
+  "description": "Kanban boards for you, your team and your duckies: columns with WIP limits, cards with checklists, labels, due dates, comments and attachments, live team sync, card and column locks that say which ducky holds them and for whom, and kanban_* tools so any AI can plan and move work.",
+  "min_app_version": "1.2.400",
+  "default_enabled": false,
+  "data_sharing": true,
+  "data_locks": { "": "none" },
+  "secret_keys": [],
+  "contributes": {
+    "agent.tools": {
+      "category": "kanban",
+      "intent_pattern": "\\b(kanban|boards?|cards?|backlog|sprint|wip limit|to-?do list)\\b",
+      "plan_tools": ["kanban_list_boards", "kanban_get_board", "kanban_templates", "kanban_activity", "kanban_search"],
+      "destructive_tools": ["kanban_delete_board", "kanban_delete_card", "kanban_force_unlock", "kanban_restore_card"]
+    },
+    "ui.panels": [
+      { "id": "board", "title": "Kanban", "icon": "assets/icon.svg", "entry": "ui/index.html" }
+    ],
+    "header.buttons": [
+      { "id": "board", "title": "Kanban", "icon": "assets/icon.svg", "action": "panel:board", "order": 60 }
+    ],
+    "settings.tabs": [
+      { "id": "Kanban", "label": "Kanban", "icon": "assets/icon.svg", "ui": "sections" }
+    ],
+    "settings.sections": [
+      {
+        "tab": "Kanban",
+        "id": "view",
+        "title": "Cards",
+        "description": "How cards look on your boards. Only on this PC: teammates keep their own. Each board's team rules (WIP limits, locks, what duckies may do) are in the board's own settings.",
+        "order": 10,
+        "properties": [
+          { "id": "kanban_density", "type": "select", "label": "Density", "default": "compact",
+            "options": [{ "value": "compact", "label": "Compact" }, { "value": "comfortable", "label": "Comfortable" }] },
+          { "id": "kanban_show_labels", "type": "boolean", "label": "Labels", "default": true },
+          { "id": "kanban_show_priority", "type": "boolean", "label": "Priority (high and urgent)", "default": true },
+          { "id": "kanban_show_due", "type": "boolean", "label": "Due date", "default": true },
+          { "id": "kanban_show_checklist", "type": "boolean", "label": "Checklist progress", "default": true },
+          { "id": "kanban_show_comments", "type": "boolean", "label": "Comment count", "default": true },
+          { "id": "kanban_show_assignee", "type": "boolean", "label": "Assignee", "default": true },
+          { "id": "kanban_show_desc", "type": "boolean", "label": "Description preview", "default": false }
+        ]
+      }
+    ],
+    "automations": {
+      "nodes": [
+        { "id": "kanban.list_boards", "label": "List boards", "group": "Kanban",
+          "outputs": [{ "id": "boards", "label": "Boards", "type": "json" }, { "id": "count", "label": "Count", "type": "number" }] },
+        { "id": "kanban.get_board", "label": "Read board", "group": "Kanban",
+          "config_fields": [{ "id": "board", "label": "Board", "type": "string" }],
+          "inputs": [{ "id": "board", "label": "Board", "type": "text" }],
+          "outputs": [{ "id": "cards", "label": "Cards", "type": "json" }, { "id": "board", "label": "Board", "type": "json" }] },
+        { "id": "kanban.create_card", "label": "Add card", "group": "Kanban",
+          "config_fields": [{ "id": "board", "label": "Board", "type": "string" }, { "id": "column", "label": "Column", "type": "string" },
+                            { "id": "priority", "label": "Priority", "type": "string" }],
+          "inputs": [{ "id": "title", "label": "Title", "type": "text", "required": true }, { "id": "desc", "label": "Description", "type": "text" }],
+          "outputs": [{ "id": "card", "label": "Card", "type": "json" }] },
+        { "id": "kanban.move_card", "label": "Move card", "group": "Kanban",
+          "config_fields": [{ "id": "board", "label": "Board", "type": "string" }, { "id": "column", "label": "To column", "type": "string" }],
+          "inputs": [{ "id": "card", "label": "Card", "type": "text", "required": true }],
+          "outputs": [{ "id": "card", "label": "Card", "type": "json" }] },
+        { "id": "kanban.comment", "label": "Comment on card", "group": "Kanban",
+          "config_fields": [{ "id": "board", "label": "Board", "type": "string" }],
+          "inputs": [{ "id": "card", "label": "Card", "type": "text", "required": true }, { "id": "text", "label": "Comment", "type": "text", "required": true }],
+          "outputs": [{ "id": "comment", "label": "Comment", "type": "json" }] }
+      ],
+      "templates": [
+        {
+          "id": "kanban-plan-to-cards", "label": "Plan into Kanban cards", "category": "Kanban",
+          "description": "Chat start → Agent breaks the request into tasks → Add card.",
+          "graph": {
+            "nodes": [
+              { "id": "s", "type": "start.chat", "x": 0, "y": 0, "config": {} },
+              { "id": "a", "type": "pipeline.agent", "x": 220, "y": 0, "config": {} },
+              { "id": "n", "type": "kanban.create_card", "x": 440, "y": 0, "config": {} },
+              { "id": "f", "type": "pipeline.finish", "x": 660, "y": 0, "config": {} }
+            ],
+            "edges": [
+              { "source": "s", "target": "a", "kind": "main" },
+              { "source": "a", "target": "n", "kind": "main" },
+              { "source": "n", "target": "f", "kind": "main" }
+            ]
+          }
+        },
+        {
+          "id": "kanban-board-report", "label": "Report on a Kanban board", "category": "Kanban",
+          "description": "Chat start → Read board → Agent summarises what is stuck → Finish.",
+          "graph": {
+            "nodes": [
+              { "id": "s", "type": "start.chat", "x": 0, "y": 0, "config": {} },
+              { "id": "r", "type": "kanban.get_board", "x": 220, "y": 0, "config": {} },
+              { "id": "a", "type": "pipeline.agent", "x": 440, "y": 0, "config": {} },
+              { "id": "f", "type": "pipeline.finish", "x": 660, "y": 0, "config": {} }
+            ],
+            "edges": [
+              { "source": "s", "target": "r", "kind": "main" },
+              { "source": "r", "target": "a", "kind": "main" },
+              { "source": "a", "target": "f", "kind": "main" }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "backend": { "entry": "backend", "register": "register" }
+}
