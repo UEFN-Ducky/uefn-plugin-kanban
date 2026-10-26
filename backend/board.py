@@ -27,6 +27,7 @@ COLORS = ("blue", "green", "red", "purple", "amber", "yellow")
 DUCKY_LEASE_S = 120.0
 YIELD_LEASE_S = 15.0
 ACT_KEEP = 200
+ACT_MERGE_S = 60.0  # the same person's same entry again this soon (typing, saved as they go) is one entry
 SETTINGS = {
     "enforceWip": True,      # refuse moves and new cards into a full column
     "agentColLocks": True,   # duckies may lock a whole column
@@ -528,8 +529,14 @@ class Boards:
         return out
 
     def _log(self, bid: str, text: str) -> None:
-        now = self.clock()
-        self.data.put(f"act.{bid}.{int(now * 1000):014d}-{uid()[:4]}", {"by": self.actor(), "text": text, "at": now})
+        now, by = self.clock(), self.actor()
+        keys = sorted(self.data.keys(f"act.{bid}."))
+        last = self.data.get(keys[-1]) if keys else None
+        if (isinstance(last, dict) and last.get("text") == text and last.get("by") == by
+                and now - float(last.get("at") or 0) < ACT_MERGE_S):
+            self.data.put(keys[-1], {**last, "at": now})  # one entry for an edit saved as it is typed
+            return
+        self.data.put(f"act.{bid}.{int(now * 1000):014d}-{uid()[:4]}", {"by": by, "text": text, "at": now})
         keys = sorted(self.data.keys(f"act.{bid}."))
         for key in keys[:-ACT_KEEP]:
             self.data.delete(key)

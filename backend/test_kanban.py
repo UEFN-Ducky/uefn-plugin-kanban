@@ -162,3 +162,16 @@ def test_bad_input_is_refused_with_a_reason(w: World) -> None:
     with pytest.raises(board.Refused, match="No board"):
         kb.view("missing")
     assert len(kb.boards()) == 1 and kb.delete_board(b["id"])["name"] == "X" and not kb.boards()
+
+
+def test_an_edit_saved_as_it_is_typed_is_one_activity_entry(w: World) -> None:
+    b = w.as_(ILYA).create_board("Ops", "blank")
+    card = w.as_(ILYA).create_card(b["id"], "Spawn pads")
+    for text in ("F", "Fou", "Four pads"):  # saved at each pause while typing
+        w.t += 2
+        w.as_(ILYA).update_card(b["id"], card["id"], {"desc": text})
+    updated = lambda: [a for a in w.as_(ILYA).activity(b["id"])["items"] if a["text"].startswith("updated")]  # noqa: E731
+    assert len(updated()) == 1 and updated()[0]["at"] == w.t
+    w.t += board.ACT_MERGE_S + 1  # a later edit is its own entry
+    w.as_(ILYA).update_card(b["id"], card["id"], {"desc": "Four pads, lit"})
+    assert len(updated()) == 2

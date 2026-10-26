@@ -1,13 +1,14 @@
 {
   "id": "kanban",
   "kind": "plugin",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "label": "Kanban",
   "description": "Kanban boards for you, your team and your duckies: columns with WIP limits, cards with checklists, labels, due dates, comments and attachments, live team sync, card and column locks that say which ducky holds them and for whom, and kanban_* tools so any AI can plan and move work.",
   "min_app_version": "1.2.400",
   "default_enabled": false,
   "data_sharing": true,
   "data_locks": { "": "none" },
+  "data_live": true,
   "secret_keys": [],
   "contributes": {
     "agent.tools": {

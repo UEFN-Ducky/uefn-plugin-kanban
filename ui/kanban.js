@@ -726,8 +726,27 @@ async function addLink() {
   await edit({ attachments: [...(c.attachments || []), { kind: "link", name: u.hostname.replace(/^www\./, "") + (u.pathname.length > 1 ? decodeURIComponent(u.pathname) : ""), url: u.href, at: Date.now() / 1000 }] });
 }
 
+// Text fields in the card window and the board settings save as they are typed (a pause of
+// SAVE_TYPED_MS), so teammates live in the same group see the words arrive; the window keeps
+// the field's own text and cursor when the board redraws (renderModal). Leaving the field
+// saves what is left.
+const SAVE_TYPED_MS = 400;
+const TYPED = /^(m-title|m-desc|s-name)$/;
+let typedT = 0;
+document.addEventListener("input", (e) => {
+  if (!TYPED.test(e.target.id || "")) return;
+  clearTimeout(typedT);
+  const t = e.target;
+  typedT = setTimeout(() => saveField(t), SAVE_TYPED_MS);
+});
+
 document.addEventListener("change", (e) => {
-  const t = e.target, d = t.dataset;
+  if (TYPED.test(e.target.id || "")) clearTimeout(typedT);
+  saveField(e.target);
+});
+
+function saveField(t) {
+  const d = t.dataset;
   if (d.rename) { const c = cols(); const x = c.find((y) => y.id === d.rename); if (t.value.trim() && x.title !== t.value.trim()) { x.title = t.value.trim(); saveColumns(c); } return; }
   if (d.labelName) return saveLabels(board().labels.map((l) => (l.id === d.labelName ? { ...l, name: t.value.trim() || l.name } : l)));
   if (t.id === "s-name") { if (t.value.trim()) act(rpc("update_board", { board: S.boardId, name: t.value.trim() })); return; }
@@ -737,7 +756,7 @@ document.addEventListener("change", (e) => {
   if (t.id === "m-title") { const v = t.value.replace(/\n/g, " ").trim(); if (v && v !== c.title) edit({ title: v }); }
   else if (t.id === "m-desc") { if (t.value !== c.desc) edit({ desc: t.value }); }
   else if (d.ckText) edit({ checklist: c.checklist.map((x) => (x.id === d.ckText ? { ...x, text: t.value } : x)) });
-});
+}
 
 document.addEventListener("input", (e) => {
   if (e.target.id === "q") { S.q = e.target.value; render(); }
@@ -749,6 +768,10 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey && id === "new-card") { e.preventDefault(); return submitAdd(S.adding); }
   if (e.key === "Enter" && !e.shiftKey && id === "m-comment") { e.preventDefault(); return postComment(); }
   if (e.key === "Enter" && !e.shiftKey && id === "m-title") { e.preventDefault(); return e.target.blur(); }
+  if (e.key === "Enter" && (e.target.dataset?.rename || e.target.dataset?.labelName || id === "s-name")) {
+    e.preventDefault();
+    return e.target.blur();  // saves it (change)
+  }
   if (e.key === "Enter" && id === "m-new-item") {
     const text = e.target.value.trim(); if (!text) return;
     e.target.value = "";
@@ -824,10 +847,11 @@ window.addEventListener("message", (ev) => {
 });
 let quiet = 0;
 function loadBoardsQuiet() { clearTimeout(quiet); quiet = setTimeout(loadBoards, 120); }
-// ponytail: a 4 s poll shows lock expiry and teammates' changes between syncs; push-only once the host sends lock ticks.
+// ponytail: a 4 s poll shows lock expiry and teammates' changes between syncs (the board list
+// too: a board renamed elsewhere); push-only once the host sends lock ticks.
 setInterval(() => {
   const typing = document.activeElement && document.activeElement.matches("input, textarea");
-  if (S.visible && S.boardId && !S.drag && !typing && !document.hidden) loadView();
+  if (S.visible && S.boardId && !S.drag && !typing && !document.hidden) loadBoards();
 }, POLL_MS);
 
 async function loadPrefs() {
