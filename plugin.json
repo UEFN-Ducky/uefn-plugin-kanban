@@ -22,7 +22,7 @@
     ],
     "chat": {
       "reference_sources": [
-        { "id": "boards", "rpc": "chat_refs", "panel": "board", "label": "Kanban", "icon": "assets/icon.svg" }
+        { "id": "boards", "rpc": "chat_refs", "panel": "board", "label": "Kanban", "icon": "assets/icon.svg", "refresh_on": ["kanban_changed"] }
       ]
     },
     "header.buttons": [
