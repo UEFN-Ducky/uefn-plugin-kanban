@@ -20,6 +20,11 @@
     "ui.panels": [
       { "id": "board", "title": "Kanban", "icon": "assets/icon.svg", "entry": "ui/index.html" }
     ],
+    "chat": {
+      "reference_sources": [
+        { "id": "boards", "rpc": "chat_refs", "panel": "board", "label": "Kanban", "icon": "assets/icon.svg" }
+      ]
+    },
     "header.buttons": [
       { "id": "board", "title": "Kanban", "icon": "assets/icon.svg", "action": "panel:board", "order": 60 }
     ],

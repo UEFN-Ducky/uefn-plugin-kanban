@@ -363,6 +363,8 @@ def register(api) -> None:
         "lock": lock, "unlock": unlock, "ask_yield": ask_yield, "force_unlock": force_unlock,
         "activity": activity, "search": search, "attach": attach, "attachment": attachment, "people": people,
         "view_prefs": view_prefs,
+        # Ducky's @ / / menu and search list every board (contributes.chat.reference_sources).
+        "chat_refs": lambda: kb.reference_rows(),
     }.items():
         api.register_panel_rpc(name, fn)
 

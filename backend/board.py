@@ -133,6 +133,15 @@ class Boards:
                         "editing": sorted({label(lk["by"]) for lk in self._locks(bid).values()})})
         return sorted(out, key=lambda r: -float(r["updatedAt"] or 0))
 
+    def reference_rows(self) -> list[dict[str, Any]]:
+        """Every board as a row for Ducky's @ / / menu and search: ``{id, label, description}``."""
+        rows = []
+        for b in self.boards():
+            open_cards = sum(c["count"] for c in b["columns"][:-1])  # the last column is Done
+            rows.append({"id": b["id"], "label": b["name"] or b["id"],
+                         "description": f"{b['cards']} cards · {open_cards} open"})
+        return rows
+
     def board(self, ref: str) -> dict[str, Any]:
         ref = str(ref or "").strip()
         if not ref:

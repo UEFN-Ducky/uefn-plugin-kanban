@@ -76,6 +76,14 @@ def test_create_edit_move_delete_and_read_back(w: World) -> None:
         kb.card(b["id"], card["id"])
 
 
+def test_boards_list_for_ducky_references(w: World) -> None:
+    kb = w.as_(ILYA)
+    b = kb.create_board("Product Sprint", "sprint")
+    rows = kb.reference_rows()
+    assert rows == [{"id": b["id"], "label": "Product Sprint", "description": "4 cards · 4 open"}]
+    assert all(ch.isalnum() or ch in "_.-" for ch in rows[0]["id"])  # fits in a plugin:kanban/board:<id> link
+
+
 def test_wip_limit_refuses_a_full_column(w: World) -> None:
     kb = w.as_(ILYA)
     b = kb.create_board("Bugs", "bugs")  # Fixing: WIP 3, holds 1

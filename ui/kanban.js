@@ -843,6 +843,9 @@ window.addEventListener("message", (ev) => {
   } else if (e.type === "panel.visibility") {
     S.visible = !!e.visible;
     if (S.visible) loadPrefs().then(loadBoardsQuiet);
+  } else if (e.type === "panel.open_item" && typeof e.item === "string" && e.item) {
+    // A board picked from Ducky's @ / / menu or search.
+    booted.then(() => { if (S.boardId !== e.item) selectBoard(e.item); });
   }
 });
 let quiet = 0;
@@ -868,4 +871,4 @@ async function boot() {
 }
 call("plugin.subscribe", { types: ["kanban_changed"] }).catch(() => {});
 window.addEventListener("beforeunload", () => { if (S.open && S.openMine) rpc("unlock", { board: S.boardId, card: S.open }); });
-boot();
+const booted = boot();
