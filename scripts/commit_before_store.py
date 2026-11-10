@@ -81,7 +81,10 @@ def commit_and_push_before_publish(root: Path, changelog: str = "") -> None:
         raise SystemExit("Store publish refuses a dirty clone. Commit these first:\n  " + "\n  ".join(leftover))
 
     if "origin" in _git(root, "remote", check=False).stdout.split():
-        push = _git(root, "push", "-u", "origin", "HEAD", check=False)
+        on_branch = _git(root, "symbolic-ref", "-q", "HEAD", check=False).returncode == 0
+        # Detached HEAD (sandbox worktrees) has no branch to name: push it to main.
+        refspec = ["-u", "origin", "HEAD"] if on_branch else ["origin", "HEAD:refs/heads/main"]
+        push = _git(root, "push", *refspec, check=False)
         if push.returncode != 0:
             raise SystemExit(push.stderr or push.stdout or "git push failed")
         print("pushed HEAD to origin before Store publish")
